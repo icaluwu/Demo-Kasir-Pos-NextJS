@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon/serverless: non-pooled untuk migrate. Lokal Docker: isi sama dengan DATABASE_URL.
+  directUrl = env("DIRECT_URL")
+}
+
+model Product {
+  id         String   @id @default(cuid())
+  sku        String   @unique
+  name       String
+  category   String?
+  brand      String?
+  unit       String   @default("pcs")
+  costPrice  Decimal  @default(0) @db.Decimal(14, 2)
+  sellPrice  Decimal  @default(0) @db.Decimal(14, 2)
+  stockQty   Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  movements StockMovement[]
+  saleLines SaleLine[]
+
+  @@index([name])
+  @@index([sku])
+  @@index([category])
+}
+
+model StockMovement {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type      String
+  qty       Int
+  note      String?
+  refSaleId String?
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+model Sale {
+  id        String     @id @default(cuid())
+  invoiceNo String     @unique
+  total     Decimal    @db.Decimal(14, 2)
+  createdAt DateTime   @default(now())
+  lines     SaleLine[]
+
+  @@index([createdAt])
+}
+
+model SaleLine {
+  id        String  @id @default(cuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  qty       Int
+  unitPrice Decimal @db.Decimal(14, 2)
+  subtotal  Decimal @db.Decimal(14, 2)
+
+  @@index([saleId])
+  @@index([productId])
+}

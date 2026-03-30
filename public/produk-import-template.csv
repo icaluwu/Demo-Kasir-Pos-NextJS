@@ -1,0 +1,3 @@
+sku,name,category,brand,unit,costPrice,sellPrice,initialStock
+EX-000001,Contoh Sparepart Mesin A,Mesin,OEM,pcs,100000,115000,5
+EX-000002,Contoh Filter B,Filter,GEN,pcs,45000,52000,12
