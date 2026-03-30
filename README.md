@@ -32,7 +32,7 @@ Pilih salah satu:
   docker compose up -d
   ```
 
-  Pastikan nilai `DATABASE_URL` dan `DIRECT_URL` di `.env.local` mengarah ke `127.0.0.1:5432`, sesuai contoh di [`.env.example`](./.env.example).
+  Pastikan `DATABASE_URL` dan `DATABASE_URL_UNPOOLED` di `.env.local` mengarah ke `127.0.0.1:5432` (nilai unpooled boleh sama dengan pooled), sesuai [`.env.example`](./.env.example).
 
 - **Layanan cloud** (misalnya [Neon](https://neon.tech), [Supabase](https://supabase.com), atau instans Postgres lain) — ganti connection string dengan URL yang valid. Hindari placeholder seperti hostname literal `HOST`; Prisma akan gagal menghubungi database.
 
@@ -48,8 +48,8 @@ Isi minimal:
 
 | Variabel | Keterangan |
 | -------- | ---------- |
-| `DATABASE_URL` | Connection string Postgres yang dapat dijangkau dari mesin Anda. |
-| `DIRECT_URL` | Untuk migrasi Prisma; di lokal Docker biasanya sama dengan `DATABASE_URL`. |
+| `DATABASE_URL` | Connection string Postgres (runtime / pooled jika pakai Neon). |
+| `DATABASE_URL_UNPOOLED` | URL non-pooled untuk migrasi Prisma; lokal Docker duplikat `DATABASE_URL`. |
 | `SESSION_SECRET` | Minimal 32 karakter, acak; wajib di production. |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Kredensial admin demo. |
 
@@ -84,10 +84,12 @@ Buka [http://localhost:3000](http://localhost:3000), login, lalu gunakan sidebar
 
 Vercel menjalankan aplikasi Next.js; **PostgreSQL tidak disertakan**. Gunakan database terpisah, umumnya [Neon](https://neon.tech) melalui [Vercel Marketplace](https://vercel.com/marketplace) atau akun Neon langsung.
 
+**Integrasi Neon + Vercel** biasanya mengisi otomatis `DATABASE_URL` (pooled) dan `DATABASE_URL_UNPOOLED` (direct). Repositori ini memetakan `directUrl` Prisma ke `DATABASE_URL_UNPOOLED` agar cocok dengan nama variabel tersebut. Jika di project Anda hanya muncul `POSTGRES_URL_NON_POOLING`, tambahkan manual env **`DATABASE_URL_UNPOOLED`** dengan nilai yang sama.
+
 ### Membuat database
 
 1. Buat project dan database di Neon (atau pasang integrasi Neon dari Vercel).
-2. Di dashboard Neon, buka **Connection details**. Biasanya tersedia URL **pooled** (untuk runtime serverless) dan URL **direct** (untuk migrasi schema).
+2. Pastikan ada pasangan URL **pooled** dan **unpooled** (di UI integrasi: `DATABASE_URL` + `DATABASE_URL_UNPOOLED`).
 
 ### Menghubungkan repositori
 
@@ -99,9 +101,9 @@ Di **Settings → Environment Variables**, set untuk **Production** (dan **Previ
 
 | Name | Isi |
 | ---- | --- |
-| `DATABASE_URL` | URL pooled Neon untuk runtime. |
-| `DIRECT_URL` | URL direct Neon untuk `prisma db push` / migrate dari mesin lokal. |
-| `SESSION_SECRET` | String acak ≥ 32 karakter. |
+| `DATABASE_URL` | URL pooled (diisi Neon / Vercel). |
+| `DATABASE_URL_UNPOOLED` | URL non-pooled (diisi Neon / Vercel); dipakai Prisma untuk migrate. |
+| `SESSION_SECRET` | String acak ≥ 32 karakter (**wajib ditambahkan manual** — tidak dibuat Neon). |
 | `ADMIN_USERNAME` | Nama pengguna admin. |
 | `ADMIN_PASSWORD` | Kata sandi; ganti dari default sebelum URL dipublikasikan. |
 
@@ -109,7 +111,7 @@ Setelah mengubah variabel, lakukan **Redeploy**.
 
 ### Migrasi schema ke database production
 
-Dari mesin lokal, gunakan connection string yang konsisten dengan Neon (utamakan **`DIRECT_URL`** yang benar untuk migrasi):
+Dari mesin lokal, salin `DATABASE_URL` dan `DATABASE_URL_UNPOOLED` dari Vercel ke `.env.production.local` (atau export sementara), lalu jalankan:
 
 ```bash
 npx prisma db push
@@ -122,6 +124,16 @@ Opsional: `npm run db:seed` hanya jika memang boleh mengisi data contoh pada dat
 - Deployment **Preview** dapat memakai branch database Neon terpisah atau database yang sama, menurut kebijakan tim.
 - Kombinasi Prisma, serverless, dan banyak koneksi pendek berjalan lebih stabil dengan URL **pooled**.
 - Jangan meng-commit berkas `.env` yang berisi rahasia; gunakan **Environment Variables** di Vercel.
+
+### Troubleshooting: “This page couldn’t load” / error digest di browser
+
+Production menyembunyikan pesan asli dari Server Components. Pada deploy Vercel, penyebab paling sering:
+
+1. **`SESSION_SECRET` belum di-set atau kurang dari 32 karakter** — setiap halaman yang memakai sesi (termasuk `/login`) akan gagal. Di Vercel → Project → Settings → Environment Variables, tambahkan string acak panjang (misalnya 64 karakter), lalu **Redeploy**.
+2. **`DATABASE_URL_UNPOOLED` belum di-set** — Prisma membutuhkannya (nama yang dipakai integrasi Neon di Vercel). Jika tidak ada, salin nilai dari `POSTGRES_URL_NON_POOLING` ke variabel baru `DATABASE_URL_UNPOOLED`.
+3. **`DATABASE_URL` salah atau DB tidak bisa dijangkau** — pastikan host/user/password benar, firewall Neon mengizinkan Vercel (biasanya default mengizinkan), dan Anda sudah menjalankan `npx prisma db push` ke database production dari lokal.
+
+Untuk diagnosis cepat, buka **Vercel → Deployment → Logs (Runtime)** atau tab **Functions** saat membuka URL; bandingkan dengan checklist di atas. Setelah memperbaiki env, wajib **Redeploy** deployment terbaru.
 
 ## Skrip npm
 

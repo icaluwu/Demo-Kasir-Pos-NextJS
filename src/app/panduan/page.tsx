@@ -123,8 +123,10 @@ export default async function PanduanPage() {
           <ol className="list-inside list-decimal space-y-2 text-sm text-zinc-400">
             <li>Push repo ke GitHub / GitLab.</li>
             <li>
-              Buat project di Vercel, set environment:{" "}
-              <code className="text-amber-200/90">DATABASE_URL</code>,{" "}
+              Buat project di Vercel. Neon mengisi{" "}
+              <code className="text-amber-200/90">DATABASE_URL</code> dan{" "}
+              <code className="text-amber-200/90">DATABASE_URL_UNPOOLED</code>. Tambahkan
+              manual:{" "}
               <code className="text-amber-200/90">SESSION_SECRET</code>,{" "}
               <code className="text-amber-200/90">ADMIN_USERNAME</code>,{" "}
               <code className="text-amber-200/90">ADMIN_PASSWORD</code>.

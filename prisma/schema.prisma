@@ -5,8 +5,9 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // Neon/serverless: non-pooled untuk migrate. Lokal Docker: isi sama dengan DATABASE_URL.
-  directUrl = env("DIRECT_URL")
+  // Neon + Vercel: variabel ini diisi integrasi sebagai URL non-pooled.
+  // Lokal (Docker): duplikat nilai DATABASE_URL.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model Product {
